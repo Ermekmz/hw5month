@@ -1,3 +1,4 @@
+from django.db.models import Avg
 from django.shortcuts import render
 from rest_framework import status
 from rest_framework.decorators import api_view
@@ -12,8 +13,17 @@ from product.serializers import CategorySerializer, ProductSerializer, ReviewSer
 @api_view(['GET'])
 def category_list(request):
     categories = Category.objects.all()
-    serializer = CategorySerializer(categories, many=True).data
-    return Response(serializer)
+    category_data = []
+
+    for category in categories:
+        product_count = Product.objects.filter(category=category).count()
+        category_data.append({
+            'id': category.id,
+            'name': category.name,
+            'products_count': product_count
+        })
+
+    return Response(category_data)
 
 
 @api_view(['GET'])
@@ -44,12 +54,12 @@ def product_detail(request, pk):
     return Response(serializer)
 
 
-
 @api_view(['GET'])
 def review_list(request):
     reviews = Review.objects.all()
     serializer = ReviewSerializer(reviews, many=True)
     return Response(serializer.data)
+
 
 @api_view(['GET'])
 def review_detail(request, pk):
@@ -60,3 +70,11 @@ def review_detail(request, pk):
 
     serializer = ReviewSerializer(review)
     return Response(serializer.data)
+
+
+@api_view(['GET'])
+def products_reviews_api_view(request):
+    products_reviews = Review.objects.all()
+    avg_stars = Review.objects.aggregate(avg=Avg('stars'))
+    data_dict = ReviewSerializer(products_reviews, many=True).data
+    return Response(data=[data_dict, avg_stars])
